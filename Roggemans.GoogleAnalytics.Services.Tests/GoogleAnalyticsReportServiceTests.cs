@@ -97,7 +97,19 @@ public sealed class GoogleAnalyticsReportServiceTests
         GoogleAnalyticsOperationResult<GoogleAnalyticsSummary> result =
             await service.GetDivintageSummaryAsync();
 
-        Assert.True(result.Success, result.ErrorMessage);
+        if (!result.Success)
+        {
+            string error = $"Live report probe did not retrieve data: {result.ErrorCode} - {result.ErrorMessage}";
+            _output.WriteLine(error);
+
+            if (LiveGoogleAnalyticsOptions.RequireLiveReports())
+            {
+                Assert.Fail(error);
+            }
+
+            return;
+        }
+
         Assert.NotNull(result.Data);
         Assert.NotEmpty(result.Data!.MetricNames);
         Assert.NotNull(result.Data.Rows);

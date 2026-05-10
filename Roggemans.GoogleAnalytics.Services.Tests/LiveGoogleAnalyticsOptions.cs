@@ -24,6 +24,12 @@ internal static class LiveGoogleAnalyticsOptions
         };
     }
 
+    public static bool RequireLiveReports()
+    {
+        string? value = Read("GoogleAnalytics__RequireLiveReports", "GOOGLE_ANALYTICS_REQUIRE_LIVE_REPORTS_DIVINTAGE");
+        return bool.TryParse(value, out bool requireLiveReports) && requireLiveReports;
+    }
+
     private static string? Read(params string[] names)
     {
         foreach (string name in names)

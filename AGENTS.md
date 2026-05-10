@@ -27,8 +27,10 @@ GitHub Actions names:
 - `GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE`
 - `GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE`
 - `GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE`
+- `GOOGLE_ANALYTICS_REQUIRE_LIVE_REPORTS_DIVINTAGE`
 
 The Measurement Protocol API secret can validate Measurement Protocol payloads, but Google Analytics report retrieval requires a GA4 property id and OAuth/service-account read credentials.
+Set `GOOGLE_ANALYTICS_REQUIRE_LIVE_REPORTS_DIVINTAGE=true` only when CI should fail on an unsuccessful live reporting probe.
 
 ## Validation
 
