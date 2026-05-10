@@ -76,6 +76,9 @@ jobs:
           GoogleAnalytics__MeasurementProtocolApiSecret: ${{ secrets.GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE }}
           GoogleAnalytics__PropertyId: ${{ vars.GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE || secrets.GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE }}
           GoogleAnalytics__ServiceAccountJsonBase64: ${{ secrets.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE }}
+          GoogleAnalytics__OAuthClientId: ${{ secrets.GOOGLE_ANALYTICS_OAUTH_CLIENT_ID_DIVINTAGE }}
+          GoogleAnalytics__OAuthClientSecret: ${{ secrets.GOOGLE_ANALYTICS_OAUTH_CLIENT_SECRET_DIVINTAGE }}
+          GoogleAnalytics__OAuthRefreshToken: ${{ secrets.GOOGLE_ANALYTICS_OAUTH_REFRESH_TOKEN_DIVINTAGE }}
           GoogleAnalytics__AccessToken: ${{ secrets.GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE }}
           GoogleAnalytics__RequireLiveReports: ${{ vars.GOOGLE_ANALYTICS_REQUIRE_LIVE_REPORTS_DIVINTAGE || secrets.GOOGLE_ANALYTICS_REQUIRE_LIVE_REPORTS_DIVINTAGE || 'false' }}
         run: |
@@ -131,6 +134,9 @@ jobs:
           GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE: ${{ secrets.GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE }}
           GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE: ${{ vars.GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE || secrets.GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE }}
           GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE: ${{ secrets.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE }}
+          GOOGLE_ANALYTICS_OAUTH_CLIENT_ID_DIVINTAGE: ${{ secrets.GOOGLE_ANALYTICS_OAUTH_CLIENT_ID_DIVINTAGE }}
+          GOOGLE_ANALYTICS_OAUTH_CLIENT_SECRET_DIVINTAGE: ${{ secrets.GOOGLE_ANALYTICS_OAUTH_CLIENT_SECRET_DIVINTAGE }}
+          GOOGLE_ANALYTICS_OAUTH_REFRESH_TOKEN_DIVINTAGE: ${{ secrets.GOOGLE_ANALYTICS_OAUTH_REFRESH_TOKEN_DIVINTAGE }}
           GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE: ${{ secrets.GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE }}
         run: |
           set -euo pipefail
@@ -144,7 +150,10 @@ jobs:
           printf 'GoogleAnalytics__MeasurementProtocolApiSecret=%s\n' "${GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE}" >> "${tmp_env}"
           printf 'GoogleAnalytics__PropertyId=%s\n' "${GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE:-}" >> "${tmp_env}"
           printf 'GoogleAnalytics__ServiceAccountJsonBase64=%s\n' "${GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE:-}" >> "${tmp_env}"
-          if [ -n "${GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE:-}" ]; then
+          printf 'GoogleAnalytics__OAuthClientId=%s\n' "${GOOGLE_ANALYTICS_OAUTH_CLIENT_ID_DIVINTAGE:-}" >> "${tmp_env}"
+          printf 'GoogleAnalytics__OAuthClientSecret=%s\n' "${GOOGLE_ANALYTICS_OAUTH_CLIENT_SECRET_DIVINTAGE:-}" >> "${tmp_env}"
+          printf 'GoogleAnalytics__OAuthRefreshToken=%s\n' "${GOOGLE_ANALYTICS_OAUTH_REFRESH_TOKEN_DIVINTAGE:-}" >> "${tmp_env}"
+          if [ -n "${GOOGLE_ANALYTICS_OAUTH_REFRESH_TOKEN_DIVINTAGE:-}" ] || [ -n "${GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE:-}" ]; then
             printf 'GoogleAnalytics__AccessToken=\n' >> "${tmp_env}"
           else
             printf 'GoogleAnalytics__AccessToken=%s\n' "${GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE:-}" >> "${tmp_env}"

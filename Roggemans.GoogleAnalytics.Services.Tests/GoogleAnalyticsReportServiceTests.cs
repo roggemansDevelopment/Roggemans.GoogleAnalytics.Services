@@ -29,6 +29,53 @@ public sealed class GoogleAnalyticsReportServiceTests
     }
 
     [Fact]
+    public async Task GetDivintageSummaryAsync_prefers_oauth_refresh_token_credentials()
+    {
+        int requestCount = 0;
+        HttpMessageHandler handler = new StubHttpMessageHandler(request =>
+        {
+            requestCount++;
+
+            if (request.RequestUri?.Host == "oauth2.googleapis.com")
+            {
+                Assert.Equal(HttpMethod.Post, request.Method);
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""{"access_token":"refreshed-token","expires_in":3600,"token_type":"Bearer"}""")
+                };
+            }
+
+            Assert.Equal(HttpMethod.Post, request.Method);
+            Assert.Contains("properties/123456789:runReport", request.RequestUri?.AbsoluteUri, StringComparison.Ordinal);
+            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+            Assert.Equal("refreshed-token", request.Headers.Authorization?.Parameter);
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{}")
+            };
+        });
+
+        GoogleAnalyticsReportService service = CreateService(
+            new GoogleAnalyticsOptions
+            {
+                PropertyId = "123456789",
+                OAuthClientId = "oauth-client-id",
+                OAuthClientSecret = "oauth-client-secret",
+                OAuthRefreshToken = "oauth-refresh-token",
+                AccessToken = "stale-access-token",
+                ServiceAccountJsonBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes("{}"))
+            },
+            handler);
+
+        GoogleAnalyticsOperationResult<GoogleAnalyticsSummary> result =
+            await service.GetDivintageSummaryAsync();
+
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.Equal(2, requestCount);
+    }
+
+    [Fact]
     public async Task GetDivintageSummaryAsync_prefers_service_account_credentials_over_access_token()
     {
         bool requestWasSent = false;

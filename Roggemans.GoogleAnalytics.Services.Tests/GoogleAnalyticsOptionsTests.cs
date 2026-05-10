@@ -21,6 +21,23 @@ public sealed class GoogleAnalyticsOptionsTests
     }
 
     [Fact]
+    public void GetConfigurationStatus_reports_oauth_refresh_token_credentials_ready()
+    {
+        GoogleAnalyticsOptions options = new()
+        {
+            PropertyId = "123456789",
+            OAuthClientId = "oauth-client-id",
+            OAuthClientSecret = "oauth-client-secret",
+            OAuthRefreshToken = "oauth-refresh-token"
+        };
+
+        GoogleAnalyticsConfigurationStatus status = options.GetConfigurationStatus();
+
+        Assert.True(status.CanRunReports);
+        Assert.True(status.HasOAuthRefreshToken);
+    }
+
+    [Fact]
     public void GetConfigurationStatus_reports_measurement_protocol_validation_ready()
     {
         GoogleAnalyticsOptions options = new()

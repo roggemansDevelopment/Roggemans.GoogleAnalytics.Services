@@ -7,6 +7,7 @@ public sealed record GoogleAnalyticsConfigurationStatus(
     bool HasServiceAccountJson,
     bool HasServiceAccountJsonBase64,
     bool HasServiceAccountCredentialsPath,
+    bool HasOAuthRefreshToken,
     bool HasMeasurementId,
     bool HasMeasurementProtocolApiSecret,
     int DefaultDateRangeDays,

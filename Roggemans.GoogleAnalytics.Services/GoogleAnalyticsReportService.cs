@@ -229,6 +229,11 @@ public sealed class GoogleAnalyticsReportService : IGoogleAnalyticsReportService
 
     private async Task<string> GetReportingAccessTokenAsync(CancellationToken cancellationToken)
     {
+        if (_options.HasOAuthRefreshTokenCredential())
+        {
+            return await CreateOAuthAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         string? serviceAccountJson = _options.TryGetServiceAccountJson();
         if (!string.IsNullOrWhiteSpace(serviceAccountJson))
         {
@@ -244,7 +249,41 @@ public sealed class GoogleAnalyticsReportService : IGoogleAnalyticsReportService
         }
 
         throw new InvalidOperationException(
-            "Google Analytics reporting requires service account JSON, service account JSON base64, a credentials path, or an access token.");
+            "Google Analytics reporting requires OAuth refresh-token credentials, service account JSON, service account JSON base64, a credentials path, or an access token.");
+    }
+
+    private async Task<string> CreateOAuthAccessTokenAsync(CancellationToken cancellationToken)
+    {
+        using FormUrlEncodedContent content = new(
+        [
+            new KeyValuePair<string, string>("client_id", _options.OAuthClientId!.Trim()),
+            new KeyValuePair<string, string>("client_secret", _options.OAuthClientSecret!.Trim()),
+            new KeyValuePair<string, string>("refresh_token", _options.OAuthRefreshToken!.Trim()),
+            new KeyValuePair<string, string>("grant_type", "refresh_token")
+        ]);
+
+        using HttpResponseMessage response = await _httpClient
+            .PostAsync(_options.OAuthTokenUri, content, cancellationToken)
+            .ConfigureAwait(false);
+
+        string responseContent = await response.Content
+            .ReadAsStringAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException(
+                $"Google OAuth token refresh failed: {BuildUpstreamErrorMessage(responseContent)}");
+        }
+
+        using JsonDocument document = JsonDocument.Parse(responseContent);
+        if (document.RootElement.TryGetProperty("access_token", out JsonElement accessToken)
+            && !string.IsNullOrWhiteSpace(accessToken.GetString()))
+        {
+            return accessToken.GetString()!;
+        }
+
+        throw new InvalidOperationException("Google OAuth token refresh response did not contain an access_token.");
     }
 
     private static async Task<string> CreateServiceAccountAccessTokenAsync(

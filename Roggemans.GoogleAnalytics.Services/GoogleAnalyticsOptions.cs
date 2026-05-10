@@ -20,9 +20,17 @@ public sealed class GoogleAnalyticsOptions
 
     public string? AccessToken { get; set; }
 
+    public string? OAuthClientId { get; set; }
+
+    public string? OAuthClientSecret { get; set; }
+
+    public string? OAuthRefreshToken { get; set; }
+
     public int DefaultDateRangeDays { get; set; } = 7;
 
     public Uri DataApiBaseUri { get; set; } = new("https://analyticsdata.googleapis.com/");
+
+    public Uri OAuthTokenUri { get; set; } = new("https://oauth2.googleapis.com/token");
 
     public Uri MeasurementProtocolDebugBaseUri { get; set; } = new("https://www.google-analytics.com/debug/mp/collect");
 
@@ -33,8 +41,13 @@ public sealed class GoogleAnalyticsOptions
         bool hasServiceAccountJson = !string.IsNullOrWhiteSpace(ServiceAccountJson);
         bool hasServiceAccountJsonBase64 = !string.IsNullOrWhiteSpace(ServiceAccountJsonBase64);
         bool hasServiceAccountCredentialsPath = !string.IsNullOrWhiteSpace(ServiceAccountCredentialsPath);
+        bool hasOAuthRefreshToken =
+            !string.IsNullOrWhiteSpace(OAuthClientId)
+            && !string.IsNullOrWhiteSpace(OAuthClientSecret)
+            && !string.IsNullOrWhiteSpace(OAuthRefreshToken);
         bool hasReportingCredential =
-            hasAccessToken
+            hasOAuthRefreshToken
+            || hasAccessToken
             || hasServiceAccountJson
             || hasServiceAccountJsonBase64
             || hasServiceAccountCredentialsPath;
@@ -50,6 +63,7 @@ public sealed class GoogleAnalyticsOptions
             hasServiceAccountJson,
             hasServiceAccountJsonBase64,
             hasServiceAccountCredentialsPath,
+            hasOAuthRefreshToken,
             hasMeasurementId,
             hasMeasurementProtocolApiSecret,
             DefaultDateRangeDays,
@@ -57,7 +71,7 @@ public sealed class GoogleAnalyticsOptions
             canValidateMeasurementProtocol,
             canRunReports
                 ? "Google Analytics Data API report credentials are configured."
-                : "Google Analytics Data API reporting requires GoogleAnalytics__PropertyId plus GoogleAnalytics__ServiceAccountJsonBase64, GoogleAnalytics__ServiceAccountJson, GoogleAnalytics__ServiceAccountCredentialsPath, or GoogleAnalytics__AccessToken.",
+                : "Google Analytics Data API reporting requires GoogleAnalytics__PropertyId plus GoogleAnalytics__OAuthRefreshToken, GoogleAnalytics__ServiceAccountJsonBase64, GoogleAnalytics__ServiceAccountJson, GoogleAnalytics__ServiceAccountCredentialsPath, or GoogleAnalytics__AccessToken.",
             canValidateMeasurementProtocol
                 ? "Google Analytics Measurement Protocol debug validation is configured."
                 : "Measurement Protocol debug validation requires GoogleAnalytics__MeasurementId plus GoogleAnalytics__MeasurementProtocolApiSecret.");
@@ -74,6 +88,13 @@ public sealed class GoogleAnalyticsOptions
         return trimmed.StartsWith("properties/", StringComparison.OrdinalIgnoreCase)
             ? trimmed
             : $"properties/{trimmed}";
+    }
+
+    public bool HasOAuthRefreshTokenCredential()
+    {
+        return !string.IsNullOrWhiteSpace(OAuthClientId)
+            && !string.IsNullOrWhiteSpace(OAuthClientSecret)
+            && !string.IsNullOrWhiteSpace(OAuthRefreshToken);
     }
 
     public string? TryGetServiceAccountJson()

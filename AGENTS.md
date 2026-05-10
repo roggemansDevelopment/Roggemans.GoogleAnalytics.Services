@@ -18,6 +18,9 @@ Internal app configuration keys:
 - `GoogleAnalytics__MeasurementProtocolApiSecret`
 - `GoogleAnalytics__PropertyId`
 - `GoogleAnalytics__ServiceAccountJsonBase64`
+- `GoogleAnalytics__OAuthClientId`
+- `GoogleAnalytics__OAuthClientSecret`
+- `GoogleAnalytics__OAuthRefreshToken`
 - `GoogleAnalytics__AccessToken`
 
 GitHub Actions names:
@@ -26,12 +29,15 @@ GitHub Actions names:
 - `GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE`
 - `GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE`
 - `GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE`
+- `GOOGLE_ANALYTICS_OAUTH_CLIENT_ID_DIVINTAGE`
+- `GOOGLE_ANALYTICS_OAUTH_CLIENT_SECRET_DIVINTAGE`
+- `GOOGLE_ANALYTICS_OAUTH_REFRESH_TOKEN_DIVINTAGE`
 - `GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE`
 - `GOOGLE_ANALYTICS_REQUIRE_LIVE_REPORTS_DIVINTAGE`
 
 The Measurement Protocol API secret can validate Measurement Protocol payloads, but Google Analytics report retrieval requires a GA4 property id and OAuth/service-account read credentials.
 Set `GOOGLE_ANALYTICS_REQUIRE_LIVE_REPORTS_DIVINTAGE=true` only when CI should fail on an unsuccessful live reporting probe.
-Service-account JSON is preferred over `GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE`; the base64 secret must contain the full downloaded Google service-account JSON file.
+OAuth refresh-token credentials are preferred over service-account JSON, and service-account JSON is preferred over `GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE`. The base64 secret must contain the full downloaded Google service-account JSON file.
 
 ## Validation
 

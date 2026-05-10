@@ -19,10 +19,13 @@ The repository does not store Google Analytics secrets. Configure them with envi
 | `GoogleAnalytics__MeasurementProtocolApiSecret` | GA4 Measurement Protocol API secret. |
 | `GoogleAnalytics__PropertyId` | GA4 property id for Data API reports. |
 | `GoogleAnalytics__ServiceAccountJsonBase64` | Base64-encoded Google service-account JSON with Analytics read access. |
+| `GoogleAnalytics__OAuthClientId` | OAuth client id for a Google user account that has GA4 access. |
+| `GoogleAnalytics__OAuthClientSecret` | OAuth client secret for refresh-token based report access. |
+| `GoogleAnalytics__OAuthRefreshToken` | OAuth refresh token for durable user-account report access. |
 | `GoogleAnalytics__AccessToken` | Optional OAuth access token alternative for short-lived tests. |
 
-The Measurement Protocol API secret is not enough to read Analytics reports. To retrieve actual report data, configure `GoogleAnalytics__PropertyId` plus service-account JSON or an OAuth access token.
-When both are present, service-account JSON is preferred because raw OAuth access tokens are short-lived.
+The Measurement Protocol API secret is not enough to read Analytics reports. To retrieve actual report data, configure `GoogleAnalytics__PropertyId` plus OAuth refresh-token credentials, service-account JSON, or an OAuth access token.
+When multiple report credentials are present, OAuth refresh-token credentials are preferred, then service-account JSON, then a raw access token.
 
 ## Local Commands
 
@@ -48,6 +51,9 @@ Optional GitHub variable/secret pairs:
 - `GOOGLE_ANALYTICS_MEASUREMENT_ID_DIVINTAGE`
 - `GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE`
 - `GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE`
+- `GOOGLE_ANALYTICS_OAUTH_CLIENT_ID_DIVINTAGE`
+- `GOOGLE_ANALYTICS_OAUTH_CLIENT_SECRET_DIVINTAGE`
+- `GOOGLE_ANALYTICS_OAUTH_REFRESH_TOKEN_DIVINTAGE`
 - `GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE`
 - `GOOGLE_ANALYTICS_REQUIRE_LIVE_REPORTS_DIVINTAGE`
 

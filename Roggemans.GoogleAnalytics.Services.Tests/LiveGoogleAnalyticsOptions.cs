@@ -20,6 +20,9 @@ internal static class LiveGoogleAnalyticsOptions
             ServiceAccountCredentialsPath = Read(
                 "GoogleAnalytics__ServiceAccountCredentialsPath",
                 "GOOGLE_ANALYTICS_SERVICE_ACCOUNT_CREDENTIALS_PATH_DIVINTAGE"),
+            OAuthClientId = Read("GoogleAnalytics__OAuthClientId", "GOOGLE_ANALYTICS_OAUTH_CLIENT_ID_DIVINTAGE"),
+            OAuthClientSecret = Read("GoogleAnalytics__OAuthClientSecret", "GOOGLE_ANALYTICS_OAUTH_CLIENT_SECRET_DIVINTAGE"),
+            OAuthRefreshToken = Read("GoogleAnalytics__OAuthRefreshToken", "GOOGLE_ANALYTICS_OAUTH_REFRESH_TOKEN_DIVINTAGE"),
             AccessToken = Read("GoogleAnalytics__AccessToken", "GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE")
         };
     }
