@@ -9,6 +9,12 @@ The API exposes:
 - `GET /api/google-analytics/divintage/summary`
 - `POST /api/google-analytics/measurement-protocol/validate`
 
+The MCP project exposes:
+
+- `GET /mcp` for SSE transport
+- `POST /mcp` for JSON-RPC tool calls
+- GA4 tracking tools for page views, user identification, funnel steps, products, carts, checkout, purchases, forms, errors, custom events, and debug validation.
+
 ## Runtime Configuration
 
 The repository does not store Google Analytics secrets. Configure them with environment variables or GitHub Actions secrets:
@@ -33,6 +39,7 @@ When multiple report credentials are present, OAuth refresh-token credentials ar
 dotnet restore Roggemans.GoogleAnalytics.Services.sln
 dotnet test Roggemans.GoogleAnalytics.Services.sln
 dotnet run --project Roggemans.GoogleAnalytics.API/Roggemans.GoogleAnalytics.API.csproj
+dotnet run --project Roggemans.GoogleAnalytics.Mcp/Roggemans.GoogleAnalytics.Mcp.csproj
 ```
 
 ## Deployment

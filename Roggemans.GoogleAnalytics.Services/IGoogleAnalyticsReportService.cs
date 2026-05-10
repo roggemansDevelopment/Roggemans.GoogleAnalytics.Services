@@ -11,4 +11,8 @@ public interface IGoogleAnalyticsReportService
 
     Task<GoogleAnalyticsOperationResult<MeasurementProtocolValidationResult>> ValidateMeasurementProtocolAsync(
         CancellationToken cancellationToken = default);
+
+    Task<GoogleAnalyticsOperationResult<GoogleAnalyticsTrackingResult>> TrackAsync(
+        GoogleAnalyticsTrackingRequest trackingRequest,
+        CancellationToken cancellationToken = default);
 }

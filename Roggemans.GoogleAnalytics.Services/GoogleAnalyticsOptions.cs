@@ -32,6 +32,8 @@ public sealed class GoogleAnalyticsOptions
 
     public Uri OAuthTokenUri { get; set; } = new("https://oauth2.googleapis.com/token");
 
+    public Uri MeasurementProtocolCollectBaseUri { get; set; } = new("https://www.google-analytics.com/mp/collect");
+
     public Uri MeasurementProtocolDebugBaseUri { get; set; } = new("https://www.google-analytics.com/debug/mp/collect");
 
     public GoogleAnalyticsConfigurationStatus GetConfigurationStatus()

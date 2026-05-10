@@ -182,6 +182,88 @@ public sealed class GoogleAnalyticsReportService : IGoogleAnalyticsReportService
         }
     }
 
+    public async Task<GoogleAnalyticsOperationResult<GoogleAnalyticsTrackingResult>> TrackAsync(
+        GoogleAnalyticsTrackingRequest trackingRequest,
+        CancellationToken cancellationToken = default)
+    {
+        GoogleAnalyticsConfigurationStatus status = GetConfigurationStatus();
+        if (!status.CanValidateMeasurementProtocol)
+        {
+            return GoogleAnalyticsOperationResult<GoogleAnalyticsTrackingResult>.Fail(
+                "measurement_protocol_not_configured",
+                status.MeasurementProtocolConfigurationMessage);
+        }
+
+        if (string.IsNullOrWhiteSpace(trackingRequest.ClientId)
+            && string.IsNullOrWhiteSpace(trackingRequest.UserId))
+        {
+            return GoogleAnalyticsOperationResult<GoogleAnalyticsTrackingResult>.Fail(
+                "measurement_protocol_client_not_configured",
+                "Measurement Protocol tracking requires clientId or userId.",
+                HttpStatusCode.BadRequest);
+        }
+
+        if (trackingRequest.Events.Count == 0)
+        {
+            return GoogleAnalyticsOperationResult<GoogleAnalyticsTrackingResult>.Fail(
+                "measurement_protocol_events_missing",
+                "At least one event is required.",
+                HttpStatusCode.BadRequest);
+        }
+
+        try
+        {
+            Uri requestUri = BuildMeasurementProtocolUri(trackingRequest.DebugMode);
+            object payload = BuildMeasurementProtocolPayload(trackingRequest);
+
+            using HttpResponseMessage response = await _httpClient
+                .PostAsJsonAsync(requestUri, payload, cancellationToken)
+                .ConfigureAwait(false);
+
+            string responseContent = await response.Content
+                .ReadAsStringAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Google Analytics Measurement Protocol endpoint returned {StatusCode}: {ResponseContent}",
+                    response.StatusCode,
+                    responseContent);
+
+                return GoogleAnalyticsOperationResult<GoogleAnalyticsTrackingResult>.Fail(
+                    "measurement_protocol_tracking_failed",
+                    BuildUpstreamErrorMessage(responseContent),
+                    response.StatusCode);
+            }
+
+            IReadOnlyList<MeasurementProtocolValidationMessage> validationMessages = trackingRequest.DebugMode
+                ? ParseMeasurementProtocolValidationResponse(responseContent).ValidationMessages
+                : [];
+
+            string[] eventNames = trackingRequest.Events
+                .Select(trackingEvent => trackingEvent.Name)
+                .ToArray();
+
+            GoogleAnalyticsTrackingResult trackingResult = new(
+                validationMessages.Count == 0,
+                eventNames,
+                validationMessages,
+                trackingRequest.DebugMode,
+                DateTimeOffset.UtcNow);
+
+            return GoogleAnalyticsOperationResult<GoogleAnalyticsTrackingResult>.Ok(trackingResult);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogError(exception, "Google Analytics Measurement Protocol tracking failed.");
+
+            return GoogleAnalyticsOperationResult<GoogleAnalyticsTrackingResult>.Fail(
+                "measurement_protocol_tracking_exception",
+                exception.Message);
+        }
+    }
+
     private async Task<HttpRequestMessage> CreateRunReportRequestAsync(
         DateOnly startDate,
         DateOnly endDate,
@@ -284,6 +366,60 @@ public sealed class GoogleAnalyticsReportService : IGoogleAnalyticsReportService
         }
 
         throw new InvalidOperationException("Google OAuth token refresh response did not contain an access_token.");
+    }
+
+    private Uri BuildMeasurementProtocolUri(bool debugMode)
+    {
+        Uri baseUri = debugMode
+            ? _options.MeasurementProtocolDebugBaseUri
+            : _options.MeasurementProtocolCollectBaseUri;
+
+        string measurementId = Uri.EscapeDataString(_options.MeasurementId!.Trim());
+        string apiSecret = Uri.EscapeDataString(_options.MeasurementProtocolApiSecret!.Trim());
+        string separator = string.IsNullOrEmpty(baseUri.Query) ? "?" : "&";
+
+        return new Uri($"{baseUri}{separator}measurement_id={measurementId}&api_secret={apiSecret}");
+    }
+
+    private static object BuildMeasurementProtocolPayload(GoogleAnalyticsTrackingRequest trackingRequest)
+    {
+        Dictionary<string, object?> payload = new(StringComparer.Ordinal)
+        {
+            ["events"] = trackingRequest.Events
+                .Select(trackingEvent => new
+                {
+                    name = trackingEvent.Name.Trim(),
+                    @params = trackingEvent.Parameters
+                })
+                .ToArray()
+        };
+
+        if (!string.IsNullOrWhiteSpace(trackingRequest.ClientId))
+        {
+            payload["client_id"] = trackingRequest.ClientId.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(trackingRequest.UserId))
+        {
+            payload["user_id"] = trackingRequest.UserId.Trim();
+        }
+
+        if (trackingRequest.NonPersonalizedAds.HasValue)
+        {
+            payload["non_personalized_ads"] = trackingRequest.NonPersonalizedAds.Value;
+        }
+
+        if (trackingRequest.UserProperties is { Count: > 0 })
+        {
+            payload["user_properties"] = trackingRequest.UserProperties
+                .Where(property => !string.IsNullOrWhiteSpace(property.Key))
+                .ToDictionary(
+                    property => property.Key,
+                    property => new { value = property.Value },
+                    StringComparer.Ordinal);
+        }
+
+        return payload;
     }
 
     private static async Task<string> CreateServiceAccountAccessTokenAsync(

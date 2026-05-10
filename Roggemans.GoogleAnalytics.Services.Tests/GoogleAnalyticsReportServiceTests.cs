@@ -138,6 +138,88 @@ public sealed class GoogleAnalyticsReportServiceTests
     }
 
     [Fact]
+    public async Task TrackAsync_posts_measurement_protocol_event_to_collect_endpoint()
+    {
+        bool requestWasSent = false;
+        HttpMessageHandler handler = new StubHttpMessageHandler(async request =>
+        {
+            requestWasSent = true;
+
+            Assert.Equal(HttpMethod.Post, request.Method);
+            Assert.Contains("/mp/collect", request.RequestUri?.AbsoluteUri, StringComparison.Ordinal);
+            Assert.Contains("measurement_id=G-TEST123", request.RequestUri?.Query, StringComparison.Ordinal);
+            Assert.Contains("api_secret=", request.RequestUri?.Query, StringComparison.Ordinal);
+
+            string payload = await request.Content!.ReadAsStringAsync();
+            Assert.Contains("\"client_id\":\"client.123\"", payload, StringComparison.Ordinal);
+            Assert.Contains("\"name\":\"page_view\"", payload, StringComparison.Ordinal);
+            Assert.Contains("\"page_location\":\"https://divintage.example/products\"", payload, StringComparison.Ordinal);
+
+            return new HttpResponseMessage(HttpStatusCode.NoContent);
+        });
+
+        GoogleAnalyticsReportService service = CreateService(
+            new GoogleAnalyticsOptions
+            {
+                MeasurementId = "G-TEST123",
+                MeasurementProtocolApiSecret = "measurement-protocol-secret"
+            },
+            handler);
+
+        GoogleAnalyticsOperationResult<GoogleAnalyticsTrackingResult> result =
+            await service.TrackAsync(new GoogleAnalyticsTrackingRequest(
+                "client.123",
+                null,
+                [
+                    new GoogleAnalyticsTrackingEvent(
+                        "page_view",
+                        new Dictionary<string, object?>
+                        {
+                            ["page_location"] = "https://divintage.example/products"
+                        })
+                ]));
+
+        Assert.True(requestWasSent);
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.True(result.Data?.IsValid);
+        Assert.Contains("page_view", result.Data!.EventNames);
+    }
+
+    [Fact]
+    public async Task TrackAsync_posts_debug_event_to_validation_endpoint()
+    {
+        bool requestWasSent = false;
+        HttpMessageHandler handler = new StubHttpMessageHandler(_ =>
+        {
+            requestWasSent = true;
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"validationMessages":[]}""")
+            };
+        });
+
+        GoogleAnalyticsReportService service = CreateService(
+            new GoogleAnalyticsOptions
+            {
+                MeasurementId = "G-TEST123",
+                MeasurementProtocolApiSecret = "measurement-protocol-secret"
+            },
+            handler);
+
+        GoogleAnalyticsOperationResult<GoogleAnalyticsTrackingResult> result =
+            await service.TrackAsync(new GoogleAnalyticsTrackingRequest(
+                "client.123",
+                null,
+                [new GoogleAnalyticsTrackingEvent("flow_step", new Dictionary<string, object?>())],
+                DebugMode: true));
+
+        Assert.True(requestWasSent);
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.True(result.Data?.DebugMode);
+    }
+
+    [Fact]
     public async Task Live_measurement_protocol_probe_succeeds_when_runtime_secret_is_configured()
     {
         GoogleAnalyticsOptions options = LiveGoogleAnalyticsOptions.FromEnvironment();
@@ -204,9 +286,14 @@ public sealed class GoogleAnalyticsReportServiceTests
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler
     {
-        private readonly Func<HttpRequestMessage, HttpResponseMessage> _handler;
+        private readonly Func<HttpRequestMessage, Task<HttpResponseMessage>> _handler;
 
         public StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> handler)
+            : this(request => Task.FromResult(handler(request)))
+        {
+        }
+
+        public StubHttpMessageHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> handler)
         {
             _handler = handler;
         }
@@ -215,7 +302,7 @@ public sealed class GoogleAnalyticsReportServiceTests
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult(_handler(request));
+            return _handler(request);
         }
     }
 }

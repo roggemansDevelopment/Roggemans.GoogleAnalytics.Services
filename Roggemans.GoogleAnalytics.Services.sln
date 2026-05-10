@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Roggemans.GoogleAnalytics.A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Roggemans.GoogleAnalytics.Services.Tests", "Roggemans.GoogleAnalytics.Services.Tests\Roggemans.GoogleAnalytics.Services.Tests.csproj", "{C94811B7-772A-4348-A787-27DFBFB6F93D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Roggemans.GoogleAnalytics.Mcp", "Roggemans.GoogleAnalytics.Mcp\Roggemans.GoogleAnalytics.Mcp.csproj", "{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{C94811B7-772A-4348-A787-27DFBFB6F93D}.Release|x64.Build.0 = Release|Any CPU
 		{C94811B7-772A-4348-A787-27DFBFB6F93D}.Release|x86.ActiveCfg = Release|Any CPU
 		{C94811B7-772A-4348-A787-27DFBFB6F93D}.Release|x86.Build.0 = Release|Any CPU
+		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Debug|x64.Build.0 = Debug|Any CPU
+		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Debug|x86.Build.0 = Debug|Any CPU
+		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Release|x64.ActiveCfg = Release|Any CPU
+		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Release|x64.Build.0 = Release|Any CPU
+		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Release|x86.ActiveCfg = Release|Any CPU
+		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
