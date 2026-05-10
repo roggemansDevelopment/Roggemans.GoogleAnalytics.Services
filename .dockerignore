@@ -1,0 +1,6 @@
+**/bin/
+**/obj/
+.git/
+.github/
+deploy/
+README.md
