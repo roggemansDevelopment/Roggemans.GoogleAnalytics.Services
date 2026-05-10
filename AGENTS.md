@@ -10,13 +10,23 @@ This repository contains a .NET 10 proof-of-concept Google Analytics service/API
 
 ## Secret Handling
 
-Never commit Google Analytics credentials. Use environment variables, .NET user secrets, or GitHub Actions secrets:
+Never commit Google Analytics credentials. Use internal ASP.NET configuration keys in the app and DiVintage-specific names for GitHub Actions secrets/variables.
+
+Internal app configuration keys:
 
 - `GoogleAnalytics__MeasurementId`
 - `GoogleAnalytics__MeasurementProtocolApiSecret`
 - `GoogleAnalytics__PropertyId`
 - `GoogleAnalytics__ServiceAccountJsonBase64`
 - `GoogleAnalytics__AccessToken`
+
+GitHub Actions names:
+
+- `GOOGLE_ANALYTICS_MEASUREMENT_ID_DIVINTAGE`
+- `GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE`
+- `GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE`
+- `GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE`
+- `GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE`
 
 The Measurement Protocol API secret can validate Measurement Protocol payloads, but Google Analytics report retrieval requires a GA4 property id and OAuth/service-account read credentials.
 

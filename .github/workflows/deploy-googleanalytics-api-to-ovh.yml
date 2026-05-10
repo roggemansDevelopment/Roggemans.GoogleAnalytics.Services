@@ -44,14 +44,14 @@ jobs:
 
       - name: Validate deployment inputs
         env:
-          GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET: ${{ secrets.GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET }}
+          GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE: ${{ secrets.GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE }}
           VPS_HOST: ${{ secrets.OVH_VPS_HOST }}
           VPS_USER: ${{ secrets.OVH_VPS_USER }}
           VPS_SSH_KEY: ${{ secrets.OVH_VPS_SSH_KEY }}
         run: |
           set -euo pipefail
 
-          test -n "${GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET}" || { echo "Missing secret GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET." >&2; exit 1; }
+          test -n "${GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE}" || { echo "Missing secret GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE." >&2; exit 1; }
           test -n "${VPS_HOST}" || { echo "Missing secret OVH_VPS_HOST." >&2; exit 1; }
           test -n "${VPS_USER}" || { echo "Missing secret OVH_VPS_USER." >&2; exit 1; }
           test -n "${VPS_SSH_KEY}" || { echo "Missing secret OVH_VPS_SSH_KEY." >&2; exit 1; }
@@ -72,11 +72,11 @@ jobs:
 
       - name: Test
         env:
-          GoogleAnalytics__MeasurementId: ${{ vars.GOOGLE_ANALYTICS_MEASUREMENT_ID || env.DEFAULT_MEASUREMENT_ID }}
-          GoogleAnalytics__MeasurementProtocolApiSecret: ${{ secrets.GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET }}
-          GoogleAnalytics__PropertyId: ${{ vars.GOOGLE_ANALYTICS_PROPERTY_ID || secrets.GOOGLE_ANALYTICS_PROPERTY_ID }}
-          GoogleAnalytics__ServiceAccountJsonBase64: ${{ secrets.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64 }}
-          GoogleAnalytics__AccessToken: ${{ secrets.GOOGLE_ANALYTICS_ACCESS_TOKEN }}
+          GoogleAnalytics__MeasurementId: ${{ vars.GOOGLE_ANALYTICS_MEASUREMENT_ID_DIVINTAGE || env.DEFAULT_MEASUREMENT_ID }}
+          GoogleAnalytics__MeasurementProtocolApiSecret: ${{ secrets.GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE }}
+          GoogleAnalytics__PropertyId: ${{ vars.GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE || secrets.GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE }}
+          GoogleAnalytics__ServiceAccountJsonBase64: ${{ secrets.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE }}
+          GoogleAnalytics__AccessToken: ${{ secrets.GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE }}
         run: |
           dotnet test "${{ env.TEST_PROJECT_PATH }}" \
             --configuration Release \
@@ -126,11 +126,11 @@ jobs:
 
       - name: Sync runtime env to VPS
         env:
-          GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ vars.GOOGLE_ANALYTICS_MEASUREMENT_ID || env.DEFAULT_MEASUREMENT_ID }}
-          GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET: ${{ secrets.GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET }}
-          GOOGLE_ANALYTICS_PROPERTY_ID: ${{ vars.GOOGLE_ANALYTICS_PROPERTY_ID || secrets.GOOGLE_ANALYTICS_PROPERTY_ID }}
-          GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64 }}
-          GOOGLE_ANALYTICS_ACCESS_TOKEN: ${{ secrets.GOOGLE_ANALYTICS_ACCESS_TOKEN }}
+          GOOGLE_ANALYTICS_MEASUREMENT_ID_DIVINTAGE: ${{ vars.GOOGLE_ANALYTICS_MEASUREMENT_ID_DIVINTAGE || env.DEFAULT_MEASUREMENT_ID }}
+          GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE: ${{ secrets.GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE }}
+          GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE: ${{ vars.GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE || secrets.GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE }}
+          GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE: ${{ secrets.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE }}
+          GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE: ${{ secrets.GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE }}
         run: |
           set -euo pipefail
 
@@ -139,11 +139,11 @@ jobs:
           : > "${tmp_env}"
           printf 'ASPNETCORE_ENVIRONMENT=Production\n' >> "${tmp_env}"
           printf 'ASPNETCORE_URLS=http://+:8080\n' >> "${tmp_env}"
-          printf 'GoogleAnalytics__MeasurementId=%s\n' "${GOOGLE_ANALYTICS_MEASUREMENT_ID:-${{ env.DEFAULT_MEASUREMENT_ID }}}" >> "${tmp_env}"
-          printf 'GoogleAnalytics__MeasurementProtocolApiSecret=%s\n' "${GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET}" >> "${tmp_env}"
-          printf 'GoogleAnalytics__PropertyId=%s\n' "${GOOGLE_ANALYTICS_PROPERTY_ID:-}" >> "${tmp_env}"
-          printf 'GoogleAnalytics__ServiceAccountJsonBase64=%s\n' "${GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64:-}" >> "${tmp_env}"
-          printf 'GoogleAnalytics__AccessToken=%s\n' "${GOOGLE_ANALYTICS_ACCESS_TOKEN:-}" >> "${tmp_env}"
+          printf 'GoogleAnalytics__MeasurementId=%s\n' "${GOOGLE_ANALYTICS_MEASUREMENT_ID_DIVINTAGE:-${{ env.DEFAULT_MEASUREMENT_ID }}}" >> "${tmp_env}"
+          printf 'GoogleAnalytics__MeasurementProtocolApiSecret=%s\n' "${GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE}" >> "${tmp_env}"
+          printf 'GoogleAnalytics__PropertyId=%s\n' "${GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE:-}" >> "${tmp_env}"
+          printf 'GoogleAnalytics__ServiceAccountJsonBase64=%s\n' "${GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE:-}" >> "${tmp_env}"
+          printf 'GoogleAnalytics__AccessToken=%s\n' "${GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE:-}" >> "${tmp_env}"
           printf 'GoogleAnalytics__DefaultDateRangeDays=7\n' >> "${tmp_env}"
 
           scp -i ~/.ssh/id_ed25519 \
