@@ -144,7 +144,11 @@ jobs:
           printf 'GoogleAnalytics__MeasurementProtocolApiSecret=%s\n' "${GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE}" >> "${tmp_env}"
           printf 'GoogleAnalytics__PropertyId=%s\n' "${GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE:-}" >> "${tmp_env}"
           printf 'GoogleAnalytics__ServiceAccountJsonBase64=%s\n' "${GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE:-}" >> "${tmp_env}"
-          printf 'GoogleAnalytics__AccessToken=%s\n' "${GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE:-}" >> "${tmp_env}"
+          if [ -n "${GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE:-}" ]; then
+            printf 'GoogleAnalytics__AccessToken=\n' >> "${tmp_env}"
+          else
+            printf 'GoogleAnalytics__AccessToken=%s\n' "${GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE:-}" >> "${tmp_env}"
+          fi
           printf 'GoogleAnalytics__DefaultDateRangeDays=7\n' >> "${tmp_env}"
 
           scp -i ~/.ssh/id_ed25519 \

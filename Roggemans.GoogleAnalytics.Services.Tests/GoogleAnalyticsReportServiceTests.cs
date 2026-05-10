@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Roggemans.GoogleAnalytics.Services;
@@ -25,6 +26,33 @@ public sealed class GoogleAnalyticsReportServiceTests
 
         Assert.False(result.Success);
         Assert.Equal("google_analytics_reporting_not_configured", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task GetDivintageSummaryAsync_prefers_service_account_credentials_over_access_token()
+    {
+        bool requestWasSent = false;
+        HttpMessageHandler handler = new StubHttpMessageHandler(_ =>
+        {
+            requestWasSent = true;
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        GoogleAnalyticsReportService service = CreateService(
+            new GoogleAnalyticsOptions
+            {
+                PropertyId = "123456789",
+                AccessToken = "stale-access-token",
+                ServiceAccountJsonBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes("{}"))
+            },
+            handler);
+
+        GoogleAnalyticsOperationResult<GoogleAnalyticsSummary> result =
+            await service.GetDivintageSummaryAsync();
+
+        Assert.False(result.Success);
+        Assert.Equal("google_analytics_reporting_exception", result.ErrorCode);
+        Assert.False(requestWasSent);
     }
 
     [Fact]

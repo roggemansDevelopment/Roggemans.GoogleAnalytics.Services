@@ -188,9 +188,7 @@ public sealed class GoogleAnalyticsReportService : IGoogleAnalyticsReportService
         CancellationToken cancellationToken)
     {
         string propertyName = _options.GetNormalizedPropertyName();
-        string accessToken = !string.IsNullOrWhiteSpace(_options.AccessToken)
-            ? _options.AccessToken.Trim()
-            : await CreateServiceAccountAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+        string accessToken = await GetReportingAccessTokenAsync(cancellationToken).ConfigureAwait(false);
 
         Uri requestUri = new(_options.DataApiBaseUri, $"v1beta/{propertyName}:runReport");
         object payload = new
@@ -229,15 +227,30 @@ public sealed class GoogleAnalyticsReportService : IGoogleAnalyticsReportService
         return request;
     }
 
-    private async Task<string> CreateServiceAccountAccessTokenAsync(CancellationToken cancellationToken)
+    private async Task<string> GetReportingAccessTokenAsync(CancellationToken cancellationToken)
     {
         string? serviceAccountJson = _options.TryGetServiceAccountJson();
-        if (string.IsNullOrWhiteSpace(serviceAccountJson))
+        if (!string.IsNullOrWhiteSpace(serviceAccountJson))
         {
-            throw new InvalidOperationException(
-                "Google Analytics reporting requires service account JSON, service account JSON base64, a credentials path, or an access token.");
+            return await CreateServiceAccountAccessTokenAsync(
+                    serviceAccountJson,
+                    cancellationToken)
+                .ConfigureAwait(false);
         }
 
+        if (!string.IsNullOrWhiteSpace(_options.AccessToken))
+        {
+            return _options.AccessToken.Trim();
+        }
+
+        throw new InvalidOperationException(
+            "Google Analytics reporting requires service account JSON, service account JSON base64, a credentials path, or an access token.");
+    }
+
+    private static async Task<string> CreateServiceAccountAccessTokenAsync(
+        string serviceAccountJson,
+        CancellationToken cancellationToken)
+    {
         using MemoryStream serviceAccountStream = new(Encoding.UTF8.GetBytes(serviceAccountJson));
         GoogleCredential credential = ServiceAccountCredential
             .FromServiceAccountData(serviceAccountStream)

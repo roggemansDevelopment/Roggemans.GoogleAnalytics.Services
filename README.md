@@ -22,6 +22,7 @@ The repository does not store Google Analytics secrets. Configure them with envi
 | `GoogleAnalytics__AccessToken` | Optional OAuth access token alternative for short-lived tests. |
 
 The Measurement Protocol API secret is not enough to read Analytics reports. To retrieve actual report data, configure `GoogleAnalytics__PropertyId` plus service-account JSON or an OAuth access token.
+When both are present, service-account JSON is preferred because raw OAuth access tokens are short-lived.
 
 ## Local Commands
 
@@ -51,3 +52,4 @@ Optional GitHub variable/secret pairs:
 - `GOOGLE_ANALYTICS_REQUIRE_LIVE_REPORTS_DIVINTAGE`
 
 Set `GOOGLE_ANALYTICS_REQUIRE_LIVE_REPORTS_DIVINTAGE=true` only when CI should fail if the configured reporting credential cannot read GA4 report data.
+`GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE` must be the base64 of the full downloaded Google service-account JSON file, not only the private key or key id.
