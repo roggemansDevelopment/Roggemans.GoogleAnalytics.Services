@@ -51,7 +51,7 @@ Run the API before the MCP locally, or set `GoogleAnalyticsApi__BaseUrl` to a re
 
 ## Deployment
 
-`.github/workflows/deploy-googleanalytics-api-to-ovh.yml` builds, tests, creates a Docker image, copies it to the VPS, starts a new container on a free host port starting at `8107`, and updates Caddy for `GoogleAnalyticsAPI.Test.Roggemans.com`.
+`.github/workflows/deploy-googleanalytics-api-to-ovh.yml` builds, tests, creates a Docker image, copies it to the VPS, starts a new container on a free host port starting at `8107`, attaches it to the shared `roggemans-googleanalytics` Docker network, and updates Caddy for `GoogleAnalyticsAPI.Test.Roggemans.com`.
 
 `.github/workflows/deploy-googleanalytics-mcp-to-ovh.yml` deploys the MCP host on a free host port starting at `8108`, routes `GoogleAnalytics.MCP.test.Roggemans.com` through Caddy, connects it to the API over the `roggemans-googleanalytics` Docker network, and uses `GOOGLE_ANALYTICS_MCP_API_KEY` for the MCP API key.
 

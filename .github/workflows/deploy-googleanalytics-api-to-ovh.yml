@@ -30,6 +30,7 @@ env:
   HOST_PORT: ${{ vars.GOOGLE_ANALYTICS_API_PORT || '8107' }}
   CONTAINER_PORT: "8080"
   PUBLIC_HOSTNAME: ${{ vars.GOOGLE_ANALYTICS_API_HOSTNAME || 'GoogleAnalyticsAPI.Test.Roggemans.com' }}
+  DOCKER_NETWORK: ${{ vars.GOOGLE_ANALYTICS_DOCKER_NETWORK || 'roggemans-googleanalytics' }}
   DEFAULT_MEASUREMENT_ID: "G-XJWB055WRG"
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"
   DOTNET_NOLOGO: "true"
@@ -203,7 +204,7 @@ jobs:
             -o StrictHostKeyChecking=yes \
             -p "${{ secrets.OVH_VPS_SSH_PORT || '22' }}" \
             "${{ secrets.OVH_VPS_USER }}@${{ secrets.OVH_VPS_HOST }}" \
-            "IMAGE_NAME='${{ env.IMAGE_NAME }}' IMAGE_TAG='${{ github.sha }}' IMAGE_ARCHIVE='${{ env.IMAGE_ARCHIVE }}' APP_DIR='${{ env.APP_DIR }}' CONTAINER_NAME='${{ env.CONTAINER_NAME }}' HOST_PORT='${{ env.HOST_PORT }}' CONTAINER_PORT='${{ env.CONTAINER_PORT }}' REPO_LABEL='${{ github.repository }}' bash -s" <<'EOF_DEPLOY'
+            "IMAGE_NAME='${{ env.IMAGE_NAME }}' IMAGE_TAG='${{ github.sha }}' IMAGE_ARCHIVE='${{ env.IMAGE_ARCHIVE }}' APP_DIR='${{ env.APP_DIR }}' CONTAINER_NAME='${{ env.CONTAINER_NAME }}' HOST_PORT='${{ env.HOST_PORT }}' CONTAINER_PORT='${{ env.CONTAINER_PORT }}' DOCKER_NETWORK='${{ env.DOCKER_NETWORK }}' REPO_LABEL='${{ github.repository }}' bash -s" <<'EOF_DEPLOY'
           set -euo pipefail
 
           if [ -z "${APP_DIR:-}" ]; then
@@ -234,6 +235,10 @@ jobs:
           image_ref="${IMAGE_NAME}:${IMAGE_TAG}"
 
           docker_cmd load --input "/tmp/${IMAGE_ARCHIVE}"
+
+          if ! docker_cmd network inspect "${DOCKER_NETWORK}" >/dev/null 2>&1; then
+            docker_cmd network create "${DOCKER_NETWORK}" >/dev/null
+          fi
 
           existing_id="$(docker_cmd ps -a --filter "name=^/${CONTAINER_NAME}$" --format '{{.ID}}')"
           if [ -n "${existing_id}" ]; then
@@ -280,6 +285,7 @@ jobs:
           docker_cmd run -d \
             --name "${CONTAINER_NAME}" \
             --restart unless-stopped \
+            --network "${DOCKER_NETWORK}" \
             --label "com.roggemans.repo=${REPO_LABEL}" \
             --label "com.roggemans.service=googleanalytics-api" \
             --env-file "${APP_DIR}/.env" \
