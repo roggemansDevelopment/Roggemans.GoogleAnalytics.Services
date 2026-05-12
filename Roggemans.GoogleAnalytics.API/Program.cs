@@ -41,6 +41,21 @@ app.MapGet(
     });
 
 app.MapPost(
+    "/api/google-analytics/measurement-protocol/track",
+    async (
+        GoogleAnalyticsTrackingRequest trackingRequest,
+        IGoogleAnalyticsReportService googleAnalyticsReportService,
+        CancellationToken cancellationToken) =>
+    {
+        GoogleAnalyticsOperationResult<GoogleAnalyticsTrackingResult> result =
+            await googleAnalyticsReportService
+                .TrackAsync(trackingRequest, cancellationToken)
+                .ConfigureAwait(false);
+
+        return ToHttpResult(result);
+    });
+
+app.MapPost(
     "/api/google-analytics/measurement-protocol/validate",
     async (
         IGoogleAnalyticsReportService googleAnalyticsReportService,

@@ -1,0 +1,386 @@
+name: Deploy GoogleAnalytics MCP to OVH VPS
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "Roggemans.GoogleAnalytics.Mcp/**"
+      - "Roggemans.GoogleAnalytics.ApiClient/**"
+      - "Roggemans.GoogleAnalytics.Services/**"
+      - "Roggemans.GoogleAnalytics.Services.Tests/**"
+      - "Roggemans.GoogleAnalytics.Services.sln"
+      - ".github/workflows/deploy-googleanalytics-mcp-to-ovh.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  SOLUTION_PATH: "Roggemans.GoogleAnalytics.Services.sln"
+  TEST_PROJECT_PATH: "Roggemans.GoogleAnalytics.Services.Tests/Roggemans.GoogleAnalytics.Services.Tests.csproj"
+  DOCKERFILE_PATH: "Roggemans.GoogleAnalytics.Mcp/Dockerfile"
+  IMAGE_NAME: "roggemans-googleanalytics-mcp"
+  IMAGE_ARCHIVE: "roggemans-googleanalytics-mcp.tar.gz"
+  APP_DIR: ${{ vars.GOOGLE_ANALYTICS_MCP_APP_DIR || '' }}
+  CONTAINER_NAME: ${{ vars.GOOGLE_ANALYTICS_MCP_CONTAINER_NAME || 'roggemans-googleanalytics-mcp' }}
+  HOST_PORT: ${{ vars.GOOGLE_ANALYTICS_MCP_PORT || '8108' }}
+  CONTAINER_PORT: "8080"
+  PUBLIC_HOSTNAME: ${{ vars.GOOGLE_ANALYTICS_MCP_HOSTNAME || 'GoogleAnalytics.MCP.test.Roggemans.com' }}
+  GOOGLE_ANALYTICS_API_BASE_URL: ${{ vars.GOOGLE_ANALYTICS_API_BASE_URL || 'http://roggemans-googleanalytics-api:8080/' }}
+  DOCKER_NETWORK: ${{ vars.GOOGLE_ANALYTICS_DOCKER_NETWORK || 'roggemans-googleanalytics' }}
+  API_CONTAINER_NAME: ${{ vars.GOOGLE_ANALYTICS_API_CONTAINER_NAME || 'roggemans-googleanalytics-api' }}
+  DEFAULT_MEASUREMENT_ID: "G-XJWB055WRG"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "true"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deployment inputs
+        env:
+          GOOGLE_ANALYTICS_MCP_API_KEY: ${{ secrets.GOOGLE_ANALYTICS_MCP_API_KEY }}
+          VPS_HOST: ${{ secrets.OVH_VPS_HOST }}
+          VPS_USER: ${{ secrets.OVH_VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.OVH_VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+
+          test -n "${GOOGLE_ANALYTICS_MCP_API_KEY}" || { echo "Missing secret GOOGLE_ANALYTICS_MCP_API_KEY." >&2; exit 1; }
+          test -n "${VPS_HOST}" || { echo "Missing secret OVH_VPS_HOST." >&2; exit 1; }
+          test -n "${VPS_USER}" || { echo "Missing secret OVH_VPS_USER." >&2; exit 1; }
+          test -n "${VPS_SSH_KEY}" || { echo "Missing secret OVH_VPS_SSH_KEY." >&2; exit 1; }
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore "${{ env.SOLUTION_PATH }}"
+
+      - name: Build
+        run: |
+          dotnet build "${{ env.SOLUTION_PATH }}" \
+            --configuration Release \
+            --no-restore
+
+      - name: Test
+        env:
+          GoogleAnalytics__MeasurementId: ${{ vars.GOOGLE_ANALYTICS_MEASUREMENT_ID_DIVINTAGE || env.DEFAULT_MEASUREMENT_ID }}
+          GoogleAnalytics__MeasurementProtocolApiSecret: ${{ secrets.GOOGLE_ANALYTICS_MEASUREMENT_PROTOCOL_API_SECRET_DIVINTAGE }}
+          GoogleAnalytics__PropertyId: ${{ vars.GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE || secrets.GOOGLE_ANALYTICS_PROPERTY_ID_DIVINTAGE }}
+          GoogleAnalytics__ServiceAccountJsonBase64: ${{ secrets.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_JSON_BASE64_DIVINTAGE }}
+          GoogleAnalytics__OAuthClientId: ${{ secrets.GOOGLE_ANALYTICS_OAUTH_CLIENT_ID_DIVINTAGE }}
+          GoogleAnalytics__OAuthClientSecret: ${{ secrets.GOOGLE_ANALYTICS_OAUTH_CLIENT_SECRET_DIVINTAGE }}
+          GoogleAnalytics__OAuthRefreshToken: ${{ secrets.GOOGLE_ANALYTICS_OAUTH_REFRESH_TOKEN_DIVINTAGE }}
+          GoogleAnalytics__AccessToken: ${{ secrets.GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE }}
+          GoogleAnalytics__RequireLiveReports: ${{ vars.GOOGLE_ANALYTICS_REQUIRE_LIVE_REPORTS_DIVINTAGE || secrets.GOOGLE_ANALYTICS_REQUIRE_LIVE_REPORTS_DIVINTAGE || 'false' }}
+        run: |
+          dotnet test "${{ env.TEST_PROJECT_PATH }}" \
+            --configuration Release \
+            --no-build
+
+      - name: Build Docker image
+        run: |
+          IMAGE_REF="${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          docker build \
+            --file "${{ env.DOCKERFILE_PATH }}" \
+            --tag "${IMAGE_REF}" \
+            .
+
+      - name: Export Docker image
+        run: |
+          IMAGE_REF="${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          docker save "${IMAGE_REF}" | gzip > "${{ env.IMAGE_ARCHIVE }}"
+
+      - name: Configure SSH
+        env:
+          SSH_PORT: ${{ secrets.OVH_VPS_SSH_PORT || '22' }}
+          SSH_HOST: ${{ secrets.OVH_VPS_HOST }}
+          SSH_KEY: ${{ secrets.OVH_VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${SSH_KEY}" | tr -d '\r' > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          if ! grep -q "BEGIN OPENSSH PRIVATE KEY" ~/.ssh/id_ed25519; then
+            echo "::error::OVH_VPS_SSH_KEY must contain a private key."
+            exit 1
+          fi
+
+          ssh-keyscan -p "${SSH_PORT}" -H "${SSH_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Copy image to VPS
+        run: |
+          scp -i ~/.ssh/id_ed25519 \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -P "${{ secrets.OVH_VPS_SSH_PORT || '22' }}" \
+            "${{ env.IMAGE_ARCHIVE }}" \
+            "${{ secrets.OVH_VPS_USER }}@${{ secrets.OVH_VPS_HOST }}:/tmp/${{ env.IMAGE_ARCHIVE }}"
+
+      - name: Sync runtime env to VPS
+        env:
+          GOOGLE_ANALYTICS_MCP_API_KEY: ${{ secrets.GOOGLE_ANALYTICS_MCP_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          tmp_env="/tmp/roggemans-googleanalytics-mcp.env"
+
+          : > "${tmp_env}"
+          printf 'ASPNETCORE_ENVIRONMENT=Production\n' >> "${tmp_env}"
+          printf 'ASPNETCORE_URLS=http://+:8080\n' >> "${tmp_env}"
+          printf 'Mcp__ApiKey=%s\n' "${GOOGLE_ANALYTICS_MCP_API_KEY}" >> "${tmp_env}"
+          printf 'Mcp__ServerName=Roggemans GoogleAnalytics MCP\n' >> "${tmp_env}"
+          printf 'Mcp__DefaultClientId=roggemans-googleanalytics-mcp\n' >> "${tmp_env}"
+          printf 'GoogleAnalyticsApi__BaseUrl=%s\n' "${GOOGLE_ANALYTICS_API_BASE_URL}" >> "${tmp_env}"
+          printf 'GoogleAnalyticsApi__TimeoutSeconds=30\n' >> "${tmp_env}"
+
+          scp -i ~/.ssh/id_ed25519 \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -P "${{ secrets.OVH_VPS_SSH_PORT || '22' }}" \
+            "${tmp_env}" \
+            "${{ secrets.OVH_VPS_USER }}@${{ secrets.OVH_VPS_HOST }}:/tmp/roggemans-googleanalytics-mcp.env"
+
+          ssh -i ~/.ssh/id_ed25519 \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -p "${{ secrets.OVH_VPS_SSH_PORT || '22' }}" \
+            "${{ secrets.OVH_VPS_USER }}@${{ secrets.OVH_VPS_HOST }}" \
+            "APP_DIR='${{ env.APP_DIR }}' bash -s" <<'EOF_ENV'
+          set -euo pipefail
+
+          if [ -z "${APP_DIR:-}" ]; then
+            APP_DIR="${HOME}/roggemans-googleanalytics-mcp"
+          fi
+
+          mkdir -p "${APP_DIR}" 2>/dev/null || {
+            echo "Cannot create ${APP_DIR}."
+            echo "Set GitHub variable GOOGLE_ANALYTICS_MCP_APP_DIR to a writable path on VPS."
+            exit 1
+          }
+
+          if ! mv /tmp/roggemans-googleanalytics-mcp.env "${APP_DIR}/.env" 2>/dev/null; then
+            echo "Cannot write ${APP_DIR}/.env. Check permissions."
+            exit 1
+          fi
+
+          chmod 600 "${APP_DIR}/.env" 2>/dev/null || true
+          EOF_ENV
+
+      - name: Deploy container on VPS
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -p "${{ secrets.OVH_VPS_SSH_PORT || '22' }}" \
+            "${{ secrets.OVH_VPS_USER }}@${{ secrets.OVH_VPS_HOST }}" \
+            "IMAGE_NAME='${{ env.IMAGE_NAME }}' IMAGE_TAG='${{ github.sha }}' IMAGE_ARCHIVE='${{ env.IMAGE_ARCHIVE }}' APP_DIR='${{ env.APP_DIR }}' CONTAINER_NAME='${{ env.CONTAINER_NAME }}' HOST_PORT='${{ env.HOST_PORT }}' CONTAINER_PORT='${{ env.CONTAINER_PORT }}' DOCKER_NETWORK='${{ env.DOCKER_NETWORK }}' API_CONTAINER_NAME='${{ env.API_CONTAINER_NAME }}' REPO_LABEL='${{ github.repository }}' bash -s" <<'EOF_DEPLOY'
+          set -euo pipefail
+
+          if [ -z "${APP_DIR:-}" ]; then
+            APP_DIR="${HOME}/roggemans-googleanalytics-mcp"
+          fi
+
+          docker_cmd() {
+            if ! docker info >/dev/null 2>&1; then
+              echo "Docker is unavailable for user ${USER}."
+              echo "Run on VPS: sudo usermod -aG docker ${USER}"
+              echo "Reconnect SSH and retry workflow."
+              exit 1
+            fi
+            docker "$@"
+          }
+
+          mkdir -p "${APP_DIR}" 2>/dev/null || {
+            echo "Cannot create ${APP_DIR}."
+            echo "Set GitHub variable GOOGLE_ANALYTICS_MCP_APP_DIR to a writable path on VPS."
+            exit 1
+          }
+
+          if [ ! -f "${APP_DIR}/.env" ]; then
+            echo "Missing ${APP_DIR}/.env."
+            exit 1
+          fi
+
+          image_ref="${IMAGE_NAME}:${IMAGE_TAG}"
+
+          docker_cmd load --input "/tmp/${IMAGE_ARCHIVE}"
+
+          if ! docker_cmd network inspect "${DOCKER_NETWORK}" >/dev/null 2>&1; then
+            docker_cmd network create "${DOCKER_NETWORK}" >/dev/null
+          fi
+
+          if ! docker_cmd ps --filter "name=^/${API_CONTAINER_NAME}$" --filter "status=running" --format '{{.ID}}' | grep -q .; then
+            echo "API container '${API_CONTAINER_NAME}' is not running; MCP cannot reach the GoogleAnalytics API."
+            exit 1
+          fi
+
+          docker_cmd network connect "${DOCKER_NETWORK}" "${API_CONTAINER_NAME}" >/dev/null 2>&1 || true
+
+          existing_id="$(docker_cmd ps -a --filter "name=^/${CONTAINER_NAME}$" --format '{{.ID}}')"
+          if [ -n "${existing_id}" ]; then
+            existing_label="$(docker_cmd inspect --format '{{ index .Config.Labels "com.roggemans.repo" }}' "${CONTAINER_NAME}" 2>/dev/null || true)"
+            if [ "${existing_label}" != "${REPO_LABEL}" ]; then
+              echo "Container '${CONTAINER_NAME}' already exists and is not managed by this repository."
+              echo "Choose another name with GitHub variable GOOGLE_ANALYTICS_MCP_CONTAINER_NAME."
+              exit 1
+            fi
+
+            docker_cmd rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+          fi
+
+          find_free_port() {
+            local candidate="${HOST_PORT}"
+            local tries=0
+
+            while [ "${tries}" -lt 200 ]; do
+              local used_by_container
+              used_by_container="$(docker_cmd ps --format '{{.Names}} {{.Ports}}' | awk -v p=":${candidate}->" -v self="${CONTAINER_NAME}" '$0 ~ p && $1 != self {print $1; exit}')"
+
+              local used_by_process=""
+              if command -v ss >/dev/null 2>&1; then
+                used_by_process="$(ss -ltn "( sport = :${candidate} )" | awk 'NR>1 {print $4}' | head -n 1)"
+              else
+                used_by_process="$(netstat -ltn 2>/dev/null | awk -v p=":${candidate}$" '$4 ~ p {print $4}' | head -n 1)"
+              fi
+
+              if [ -z "${used_by_container}" ] && [ -z "${used_by_process}" ]; then
+                echo "${candidate}"
+                return 0
+              fi
+
+              candidate=$((candidate + 1))
+              tries=$((tries + 1))
+            done
+
+            echo "No free host port found starting from ${HOST_PORT}." >&2
+            return 1
+          }
+
+          selected_port="$(find_free_port)"
+
+          docker_cmd run -d \
+            --name "${CONTAINER_NAME}" \
+            --restart unless-stopped \
+            --network "${DOCKER_NETWORK}" \
+            --add-host host.docker.internal:host-gateway \
+            --label "com.roggemans.repo=${REPO_LABEL}" \
+            --label "com.roggemans.service=googleanalytics-mcp" \
+            --env-file "${APP_DIR}/.env" \
+            -p "127.0.0.1:${selected_port}:${CONTAINER_PORT}" \
+            "${image_ref}" >/dev/null
+
+          health_ok=0
+          for _ in $(seq 1 45); do
+            if ! docker_cmd ps --filter "name=^/${CONTAINER_NAME}$" --filter "status=running" --format '{{.ID}}' | grep -q .; then
+              echo "Container '${CONTAINER_NAME}' is not running after start. Logs:"
+              docker_cmd logs --tail 200 "${CONTAINER_NAME}" || true
+              exit 1
+            fi
+
+            if curl -fsS "http://127.0.0.1:${selected_port}/health" >/dev/null 2>&1; then
+              health_ok=1
+              break
+            fi
+
+            sleep 2
+          done
+
+          if [ "${health_ok}" -ne 1 ]; then
+            echo "Container '${CONTAINER_NAME}' did not become healthy on port ${selected_port}."
+            docker_cmd logs --tail 200 "${CONTAINER_NAME}" || true
+            exit 1
+          fi
+
+          cat <<DEPLOYMENT > "${APP_DIR}/deployment.env"
+          GOOGLE_ANALYTICS_MCP_HOST_PORT=${selected_port}
+          GOOGLE_ANALYTICS_MCP_CONTAINER_NAME=${CONTAINER_NAME}
+          GOOGLE_ANALYTICS_MCP_IMAGE_REF=${image_ref}
+          DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          DEPLOYMENT
+
+          rm -f "/tmp/${IMAGE_ARCHIVE}"
+          docker_cmd image prune -f >/dev/null 2>&1 || true
+
+          echo "Deployed container '${CONTAINER_NAME}' on host port ${selected_port}."
+          EOF_DEPLOY
+
+      - name: Configure Caddy route
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -p "${{ secrets.OVH_VPS_SSH_PORT || '22' }}" \
+            "${{ secrets.OVH_VPS_USER }}@${{ secrets.OVH_VPS_HOST }}" \
+            "APP_DIR='${{ env.APP_DIR }}' PUBLIC_HOSTNAME='${{ env.PUBLIC_HOSTNAME }}' bash -s" <<'EOF_CADDY'
+          set -euo pipefail
+
+          if [ -z "${APP_DIR:-}" ]; then
+            APP_DIR="${HOME}/roggemans-googleanalytics-mcp"
+          fi
+
+          . "${APP_DIR}/deployment.env"
+
+          public_hostname="${PUBLIC_HOSTNAME:-GoogleAnalytics.MCP.test.Roggemans.com}"
+          selected_port="${GOOGLE_ANALYTICS_MCP_HOST_PORT}"
+          caddyfile="${CADDYFILE_PATH:-/etc/caddy/Caddyfile}"
+          tmp_caddyfile="$(mktemp)"
+
+          awk '
+            /^# BEGIN Roggemans\.GoogleAnalytics\.MCP$/ { skip = 1; next }
+            /^# END Roggemans\.GoogleAnalytics\.MCP$/ { skip = 0; next }
+            skip != 1 { print }
+          ' "${caddyfile}" > "${tmp_caddyfile}"
+
+          cat >> "${tmp_caddyfile}" <<CADDY
+
+          # BEGIN Roggemans.GoogleAnalytics.MCP
+          ${public_hostname} {
+            reverse_proxy 127.0.0.1:${selected_port}
+          }
+          # END Roggemans.GoogleAnalytics.MCP
+          CADDY
+
+          sudo caddy validate --adapter caddyfile --config "${tmp_caddyfile}"
+          sudo cp "${caddyfile}" "${caddyfile}.bak.$(date -u +%Y%m%d%H%M%S)"
+          sudo install -m 644 "${tmp_caddyfile}" "${caddyfile}"
+          sudo caddy fmt --overwrite "${caddyfile}" || true
+          sudo systemctl reload caddy
+          rm -f "${tmp_caddyfile}"
+
+          echo "Caddy routes ${public_hostname} to 127.0.0.1:${selected_port}."
+          EOF_CADDY
+
+      - name: Show deployment details
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -p "${{ secrets.OVH_VPS_SSH_PORT || '22' }}" \
+            "${{ secrets.OVH_VPS_USER }}@${{ secrets.OVH_VPS_HOST }}" \
+            "APP_DIR='${{ env.APP_DIR }}' bash -s" <<'EOF'
+          set -euo pipefail
+          if [ -z "${APP_DIR:-}" ]; then
+            APP_DIR="${HOME}/roggemans-googleanalytics-mcp"
+          fi
+          cat "${APP_DIR}/deployment.env"
+          EOF

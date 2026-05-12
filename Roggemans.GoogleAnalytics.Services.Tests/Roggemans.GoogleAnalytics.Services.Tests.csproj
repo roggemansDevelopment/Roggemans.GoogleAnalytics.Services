@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Roggemans.GoogleAnalytics.ApiClient\Roggemans.GoogleAnalytics.ApiClient.csproj" />
     <ProjectReference Include="..\Roggemans.GoogleAnalytics.Services\Roggemans.GoogleAnalytics.Services.csproj" />
   </ItemGroup>
 

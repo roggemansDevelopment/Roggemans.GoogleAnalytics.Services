@@ -6,7 +6,8 @@ This repository contains a .NET 10 proof-of-concept Google Analytics service/API
 
 - `Roggemans.GoogleAnalytics.Services`: reusable service library.
 - `Roggemans.GoogleAnalytics.API`: minimal API host and Docker entrypoint.
-- `Roggemans.GoogleAnalytics.Mcp`: HTTP/SSE MCP host for GA4 Measurement Protocol tracking tools.
+- `Roggemans.GoogleAnalytics.ApiClient`: typed HTTP client used by consumers of the API.
+- `Roggemans.GoogleAnalytics.Mcp`: HTTP/SSE MCP host for GA4 tools; it consumes `Roggemans.GoogleAnalytics.API` through the typed API client.
 - `Roggemans.GoogleAnalytics.Services.Tests`: unit tests and opt-in live probes.
 
 ## Secret Handling
@@ -39,7 +40,7 @@ GitHub Actions names:
 The Measurement Protocol API secret can validate Measurement Protocol payloads, but Google Analytics report retrieval requires a GA4 property id and OAuth/service-account read credentials.
 Set `GOOGLE_ANALYTICS_REQUIRE_LIVE_REPORTS_DIVINTAGE=true` only when CI should fail on an unsuccessful live reporting probe.
 OAuth refresh-token credentials are preferred over service-account JSON, and service-account JSON is preferred over `GOOGLE_ANALYTICS_ACCESS_TOKEN_DIVINTAGE`. The base64 secret must contain the full downloaded Google service-account JSON file.
-The MCP host follows the manual JSON-RPC over SSE pattern from the SpecsDrivenDevelopment MCP projects and exposes tool handlers for GA4 Measurement Protocol tracking.
+The MCP host follows the manual JSON-RPC over SSE pattern from the SpecsDrivenDevelopment MCP projects. Keep the MCP on the HTTP API boundary: add API endpoints/client methods first, then expose MCP tools through `Roggemans.GoogleAnalytics.ApiClient`.
 
 ## Validation
 

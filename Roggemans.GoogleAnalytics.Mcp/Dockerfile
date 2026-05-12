@@ -5,6 +5,7 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY ["Roggemans.GoogleAnalytics.Mcp/Roggemans.GoogleAnalytics.Mcp.csproj", "Roggemans.GoogleAnalytics.Mcp/"]
+COPY ["Roggemans.GoogleAnalytics.ApiClient/Roggemans.GoogleAnalytics.ApiClient.csproj", "Roggemans.GoogleAnalytics.ApiClient/"]
 COPY ["Roggemans.GoogleAnalytics.Services/Roggemans.GoogleAnalytics.Services.csproj", "Roggemans.GoogleAnalytics.Services/"]
 RUN dotnet restore "Roggemans.GoogleAnalytics.Mcp/Roggemans.GoogleAnalytics.Mcp.csproj"
 COPY . .

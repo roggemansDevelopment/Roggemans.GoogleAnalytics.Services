@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Roggemans.GoogleAnalytics.S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Roggemans.GoogleAnalytics.Mcp", "Roggemans.GoogleAnalytics.Mcp\Roggemans.GoogleAnalytics.Mcp.csproj", "{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Roggemans.GoogleAnalytics.ApiClient", "Roggemans.GoogleAnalytics.ApiClient\Roggemans.GoogleAnalytics.ApiClient.csproj", "{E74E012E-5DE4-45B9-BA84-0559B7838B61}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,18 @@ Global
 		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Release|x64.Build.0 = Release|Any CPU
 		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Release|x86.ActiveCfg = Release|Any CPU
 		{B55AD137-81EB-4C2F-8FBD-40AEF8EDB1F4}.Release|x86.Build.0 = Release|Any CPU
+		{E74E012E-5DE4-45B9-BA84-0559B7838B61}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E74E012E-5DE4-45B9-BA84-0559B7838B61}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E74E012E-5DE4-45B9-BA84-0559B7838B61}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E74E012E-5DE4-45B9-BA84-0559B7838B61}.Debug|x64.Build.0 = Debug|Any CPU
+		{E74E012E-5DE4-45B9-BA84-0559B7838B61}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E74E012E-5DE4-45B9-BA84-0559B7838B61}.Debug|x86.Build.0 = Debug|Any CPU
+		{E74E012E-5DE4-45B9-BA84-0559B7838B61}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E74E012E-5DE4-45B9-BA84-0559B7838B61}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E74E012E-5DE4-45B9-BA84-0559B7838B61}.Release|x64.ActiveCfg = Release|Any CPU
+		{E74E012E-5DE4-45B9-BA84-0559B7838B61}.Release|x64.Build.0 = Release|Any CPU
+		{E74E012E-5DE4-45B9-BA84-0559B7838B61}.Release|x86.ActiveCfg = Release|Any CPU
+		{E74E012E-5DE4-45B9-BA84-0559B7838B61}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

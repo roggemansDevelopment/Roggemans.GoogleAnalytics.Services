@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
-    <ProjectReference Include="..\Roggemans.GoogleAnalytics.Services\Roggemans.GoogleAnalytics.Services.csproj" />
+    <ProjectReference Include="..\Roggemans.GoogleAnalytics.ApiClient\Roggemans.GoogleAnalytics.ApiClient.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

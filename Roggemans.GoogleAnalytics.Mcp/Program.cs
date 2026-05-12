@@ -3,13 +3,33 @@ using System.Text.Json;
 using System.Threading.Channels;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Options;
+using Roggemans.GoogleAnalytics.ApiClient;
 using Roggemans.GoogleAnalytics.Mcp.Features.Mcp;
-using Roggemans.GoogleAnalytics.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHttpClient();
-builder.Services.AddGoogleAnalyticsServices(builder.Configuration);
+builder.Services.Configure<GoogleAnalyticsApiClientOptions>(
+    builder.Configuration.GetSection(GoogleAnalyticsApiClientOptions.SectionName));
+builder.Services.AddHttpClient<IGoogleAnalyticsApiClient, GoogleAnalyticsApiClient>((serviceProvider, client) =>
+{
+    GoogleAnalyticsApiClientOptions settings = serviceProvider
+        .GetRequiredService<IOptions<GoogleAnalyticsApiClientOptions>>()
+        .Value;
+
+    string baseUrl = settings.BaseUrl?.Trim() ?? string.Empty;
+    if (string.IsNullOrWhiteSpace(baseUrl))
+    {
+        throw new InvalidOperationException("GoogleAnalyticsApi:BaseUrl is required for the MCP host.");
+    }
+
+    if (!baseUrl.EndsWith('/'))
+    {
+        baseUrl += "/";
+    }
+
+    client.BaseAddress = new Uri(baseUrl, UriKind.Absolute);
+    client.Timeout = TimeSpan.FromSeconds(Math.Max(1, settings.TimeoutSeconds));
+});
 builder.Services.AddSingleton<GoogleAnalyticsMcpSessionStore>();
 builder.Services.AddScoped<GoogleAnalyticsMcpRequestHandler>();
 builder.Services.Configure<GoogleAnalyticsMcpOptions>(
@@ -21,6 +41,14 @@ var sseSessions = new ConcurrentDictionary<string, SseSession>();
 var sseJsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 
 app.MapGet("/", () => Results.Text("Roggemans GoogleAnalytics MCP is running."));
+
+app.MapGet(
+    "/health",
+    () => Results.Ok(new
+    {
+        service = "Roggemans.GoogleAnalytics.Mcp",
+        status = "Healthy"
+    }));
 
 app.MapGet("/mcp", async (
         HttpContext context,

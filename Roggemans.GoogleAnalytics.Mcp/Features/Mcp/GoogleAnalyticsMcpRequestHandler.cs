@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Roggemans.GoogleAnalytics.ApiClient;
 using Roggemans.GoogleAnalytics.Services;
 
 namespace Roggemans.GoogleAnalytics.Mcp.Features.Mcp;
@@ -19,11 +20,11 @@ public sealed class GoogleAnalyticsMcpRequestHandler
         WriteIndented = true
     };
 
-    private readonly IGoogleAnalyticsReportService _googleAnalytics;
+    private readonly IGoogleAnalyticsApiClient _googleAnalyticsApi;
 
-    public GoogleAnalyticsMcpRequestHandler(IGoogleAnalyticsReportService googleAnalytics)
+    public GoogleAnalyticsMcpRequestHandler(IGoogleAnalyticsApiClient googleAnalyticsApi)
     {
-        _googleAnalytics = googleAnalytics;
+        _googleAnalyticsApi = googleAnalyticsApi;
     }
 
     public async Task<IDictionary<string, object?>> HandleAsync(
@@ -102,6 +103,22 @@ public sealed class GoogleAnalyticsMcpRequestHandler
     {
         return
         [
+            Tool(
+                "get_configuration_status",
+                "Read the Google Analytics API runtime configuration status.",
+                []),
+            Tool(
+                "get_divintage_summary",
+                "Read DiVintage GA4 summary metrics from the Google Analytics API.",
+                new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["startDate"] = StringSchema("Optional start date in yyyy-MM-dd format."),
+                    ["endDate"] = StringSchema("Optional end date in yyyy-MM-dd format.")
+                }),
+            Tool(
+                "validate_measurement_protocol",
+                "Run the Google Analytics API Measurement Protocol validation probe.",
+                []),
             Tool(
                 "set_tracking_context",
                 "Store the GA4 client/user/session context for this MCP session.",
@@ -255,6 +272,9 @@ public sealed class GoogleAnalyticsMcpRequestHandler
 
         object result = toolName switch
         {
+            "get_configuration_status" => await GetConfigurationStatusAsync(cancellationToken),
+            "get_divintage_summary" => await GetDivintageSummaryAsync(arguments, cancellationToken),
+            "validate_measurement_protocol" => await ValidateMeasurementProtocolAsync(cancellationToken),
             "set_tracking_context" => HandleSetTrackingContext(arguments, sessionId, sessionStore),
             "track_page_view" => await TrackPageViewAsync(arguments, sessionId, options, sessionStore, cancellationToken),
             "track_user_identified" => await TrackUserIdentifiedAsync(arguments, sessionId, options, sessionStore, cancellationToken),
@@ -272,6 +292,40 @@ public sealed class GoogleAnalyticsMcpRequestHandler
         };
 
         return BuildToolResult(result);
+    }
+
+    private async Task<object> GetConfigurationStatusAsync(CancellationToken cancellationToken)
+    {
+        GoogleAnalyticsConfigurationStatus status =
+            await _googleAnalyticsApi.GetConfigurationStatusAsync(cancellationToken).ConfigureAwait(false);
+
+        return new
+        {
+            success = true,
+            data = status
+        };
+    }
+
+    private async Task<object> GetDivintageSummaryAsync(
+        JsonElement arguments,
+        CancellationToken cancellationToken)
+    {
+        DateOnly? startDate = ReadOptionalDate(arguments, "startDate");
+        DateOnly? endDate = ReadOptionalDate(arguments, "endDate");
+
+        GoogleAnalyticsApiResult<GoogleAnalyticsSummary> result =
+            await _googleAnalyticsApi.GetDivintageSummaryAsync(startDate, endDate, cancellationToken)
+                .ConfigureAwait(false);
+
+        return ToToolResponse(result);
+    }
+
+    private async Task<object> ValidateMeasurementProtocolAsync(CancellationToken cancellationToken)
+    {
+        GoogleAnalyticsApiResult<MeasurementProtocolValidationResult> result =
+            await _googleAnalyticsApi.ValidateMeasurementProtocolAsync(cancellationToken).ConfigureAwait(false);
+
+        return ToToolResponse(result);
     }
 
     private static object HandleSetTrackingContext(
@@ -522,8 +576,8 @@ public sealed class GoogleAnalyticsMcpRequestHandler
             debugMode,
             nonPersonalizedAds);
 
-        GoogleAnalyticsOperationResult<GoogleAnalyticsTrackingResult> result =
-            await _googleAnalytics.TrackAsync(trackingRequest, cancellationToken).ConfigureAwait(false);
+        GoogleAnalyticsApiResult<GoogleAnalyticsTrackingResult> result =
+            await _googleAnalyticsApi.TrackAsync(trackingRequest, cancellationToken).ConfigureAwait(false);
 
         return ToToolResponse(result);
     }
@@ -559,7 +613,7 @@ public sealed class GoogleAnalyticsMcpRequestHandler
         return item;
     }
 
-    private static object ToToolResponse<T>(GoogleAnalyticsOperationResult<T> result)
+    private static object ToToolResponse<T>(GoogleAnalyticsApiResult<T> result)
     {
         return result.Success
             ? new { success = true, data = result.Data }
@@ -568,7 +622,7 @@ public sealed class GoogleAnalyticsMcpRequestHandler
                 success = false,
                 errorCode = result.ErrorCode,
                 errorMessage = result.ErrorMessage,
-                statusCode = result.StatusCode is null ? null : (int?)result.StatusCode
+                statusCode = result.StatusCode
             };
     }
 
@@ -663,6 +717,27 @@ public sealed class GoogleAnalyticsMcpRequestHandler
             JsonValueKind.False => "false",
             _ => null
         };
+    }
+
+    private static DateOnly? ReadOptionalDate(JsonElement arguments, string propertyName)
+    {
+        string? value = ReadOptionalString(arguments, propertyName);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (DateOnly.TryParseExact(
+                value.Trim(),
+                "yyyy-MM-dd",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out DateOnly parsed))
+        {
+            return parsed;
+        }
+
+        throw new ArgumentException($"{propertyName} must use yyyy-MM-dd format.");
     }
 
     private static int? ReadOptionalInt(JsonElement arguments, string propertyName)
